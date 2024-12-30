@@ -5,6 +5,10 @@ edition = "2021"
 
 [dependencies]
 bevy = { version = "0.15.0", features = ["dynamic_linking"] }
+bevy_ecs_ldtk = { version = "0.11.0", features = ["atlas"] }
+bevy_ecs_tilemap = "0.15.0"
+bevy_rapier2d = "0.28.0"
+rand = "0.8.5"
 
 [profile.dev]
 opt-level = 1
