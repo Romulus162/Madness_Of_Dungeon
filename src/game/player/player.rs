@@ -6,8 +6,10 @@ use std::time::Duration;
 
 use super::animation::*;
 
-use crate::camera::{CameraPanning, CameraPanningState, PlayerCameraMarker, PLAYER_RENDER_LAYER};
-use crate::sound_effects::{SoundEffectEvent, SoundEffectType};
+// this works for now, but i'm really annoyed with this file structure, at some point i need to refactor this.
+// use crate::game::camera::camera::PLAYER_RENDER_LAYER;
+
+// use crate::sound_effects::{SoundEffectEvent, SoundEffectType};
 
 pub struct PlayerPlugin;
 
@@ -51,7 +53,7 @@ struct PlayerBundle {
     #[sprite_sheet("../assets/spritesheets/slimespritesheet.png", 16, 16, 11, 2, 1, 0, 0)]
     sprite_sheet: Sprite,
     //maybe unsure
-    render_layer: RenderLayers,
+    // render_layer: RenderLayers,
     player_marker: PlayerMarker,
     //potentially unsure
     player_status: PlayerStatus,
@@ -67,6 +69,7 @@ struct PlayerBundle {
     //likely unsure
     locked_axes: LockedAxes,
     animation_timer: AnimationTimer,
+    player_state: PlayerState,
 }
 
 impl Default for PlayerBundle {
@@ -78,8 +81,8 @@ impl Default for PlayerBundle {
             sprite_sheet:
             //Ldtk 0.10.0 (no longer used in 0.11.0)
             // LdtkSpriteSheetBundle::default(),
-            Null,
-            render_layer: PLAYER_RENDER_LAYER,
+            Sprite::default(),
+            // render_layer: PLAYER_RENDER_LAYER,
             player_marker: PlayerMarker,
             player_status: PlayerStatus{
                 coyote_frames: Timer::new(Duration::from_millis(100), TimerMode::Once),
@@ -90,6 +93,22 @@ impl Default for PlayerBundle {
                 num_keys: 0
             },
             rigid_body: RigidBody::Dynamic,
+            collider: Collider::round_cuboid(6., 3., 2.),
+            mass: AdditionalMassProperties::Mass(50.),
+            velocity: Velocity::default(),
+            friction: Friction {
+                coefficient: 0.,
+                combine_rule: CoefficientCombineRule::Min,
+            },
+            restitution: Restitution {
+                coefficient:  0.,
+                combine_rule: CoefficientCombineRule::Min,
+            },
+            locked_axes: LockedAxes::ROTATION_LOCKED,
+            player_state: PlayerState::Idle,
+            animation_timer: AnimationTimer(Timer::new(
+                Duration::from_millis(100),
+                TimerMode::Repeating))
         }
     }
 }
@@ -108,7 +127,7 @@ pub fn move_player(
     // camera_planning_state: Res<CameraPanning>,
     keys: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
-    mut sound_effect_event_writer: EventWriter<SoundEffectEvent>,
+    // mut sound_effect_event_writer: EventWriter<SoundEffectEvent>,
 ) {
     if let Ok((
         mut player_velocity,
