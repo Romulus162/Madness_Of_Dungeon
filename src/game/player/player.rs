@@ -50,7 +50,7 @@ pub struct PlayerInventory {
 struct PlayerBundle {
     //currently unsure which spritesheet to insert as I need to understand better what and how this playerbundle works, leaving empty for now
     // FURTHERMORE, :).... I need to understand the numbers in the () I am leaving them in for rememberance sake
-    #[sprite_sheet("../assets/spritesheets/slimespritesheet.png", 16, 16, 11, 2, 1, 0, 0)]
+    // #[sprite_sheet("Knight/Colour1/Outline/120x80_PNGSheets/_Idle.png", 16, 16, 11, 2, 1, 0, 0)]
     sprite_sheet: Sprite,
     //maybe unsure
     // render_layer: RenderLayers,

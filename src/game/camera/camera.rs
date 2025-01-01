@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::view::RenderLayers};
+use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
 
 const ASPECT_RATIO: f32 = 16. / 9.;
@@ -7,8 +7,8 @@ pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, camera_fit_inside_current_level)
-            // .add_systems(Startup, setup_camera)
+        app.add_systems(Startup, setup_camera)
+            .add_systems(Update, camera_fit_inside_current_level)
             .insert_resource(LevelSelection::index(0));
     }
 }
@@ -16,11 +16,17 @@ impl Plugin for CameraPlugin {
 // pub const PLAYER_RENDER_LAYER: RenderLayers = RenderLayers::layer(2);
 
 fn setup_camera(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let mut camera = Camera2d::default();
-    // camera.projection.scale = 0.5;
-    // camera.transform.translation.x += 1280.0 / 4.0;
-    // camera.transform.translation.y += 720.0 / 4.0;
-    commands.spawn(camera);
+    commands.spawn((
+        Camera2d,
+        OrthographicProjection {
+            scale: 0.5,
+            ..OrthographicProjection::default_2d()
+        },
+        Transform::from_translation(Vec3::new(1280.0 / 4.0, 720.0 / 4.0, 0.0)),
+        // PLAYER_RENDER_LAYER,
+        // Visible::new(Layer::Player),
+        // Player,
+    ));
 
     commands.spawn(LdtkWorldBundle {
         ldtk_handle: asset_server.load("Typical_2D_platformer_example.ldtk").into(),
