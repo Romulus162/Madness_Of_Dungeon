@@ -16,20 +16,9 @@ impl Plugin for CameraPlugin {
 // pub const PLAYER_RENDER_LAYER: RenderLayers = RenderLayers::layer(2);
 
 fn setup_camera(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn((
-        Camera2d,
-        OrthographicProjection {
-            scale: 0.5,
-            ..OrthographicProjection::default_2d()
-        },
-        Transform::from_translation(Vec3::new(1280.0 / 4.0, 720.0 / 4.0, 0.0)),
-        // PLAYER_RENDER_LAYER,
-        // Visible::new(Layer::Player),
-        // Player,
-    ));
-
+    commands.spawn(Camera2d);
     commands.spawn(LdtkWorldBundle {
-        ldtk_handle: asset_server.load("Typical_2D_platformer_example.ldtk").into(),
+        ldtk_handle: asset_server.load("Dungeon.ldtk").into(),
         ..Default::default()
     });
 }

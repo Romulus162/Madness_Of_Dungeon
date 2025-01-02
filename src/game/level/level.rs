@@ -43,7 +43,7 @@ fn spawn_ldtk_world(
     asset_server: Res<AssetServer>,
     target_level: Res<TargetLevel>,
 ) {
-    let handle = asset_server.load("Typical_2D_platformer_example.ldtk");
+    let handle = asset_server.load("Dungeon.ldtk");
     println!("LDtk Handle: {:?}", handle); // Debug print the handle
     commands.spawn(LdtkWorldBundle {
         ldtk_handle: handle.into(),
