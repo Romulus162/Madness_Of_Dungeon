@@ -21,30 +21,16 @@ impl Plugin for LevelManagementPlugin {
 }
 
 pub const LEVEL_IIDS: [&str; 1] = [
+    // might not be my correct iid anymore, but whatever works for now, and I will have to revist this in the future anyways \_0_/
     "a315ac10-66b0-11ec-9cd7-99f223ad6ade",
 ];
 
-//actual function
-// fn spawn_ldtk_world(
-//     mut commands: Commands,
-//     asset_server: Res<AssetServer>,
-//     // target_level: Res<TargetLevel>,
-// ) {
-//     commands.spawn(LdtkWorldBundle {
-//         ldtk_handle: asset_server.load("Typical_2D_platformer_example.ldtk").into(),
-//         // level_set: LevelSet::from_iids([LEVEL_IIDS[target_level.0]]),
-//         ..default()
-//     });
-// }
-
-//chatgtp testing code ignore
 fn spawn_ldtk_world(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     target_level: Res<TargetLevel>,
 ) {
     let handle = asset_server.load("Dungeon.ldtk");
-    println!("LDtk Handle: {:?}", handle); // Debug print the handle
     commands.spawn(LdtkWorldBundle {
         ldtk_handle: handle.into(),
         level_set: LevelSet::from_iids([LEVEL_IIDS[target_level.0]]),

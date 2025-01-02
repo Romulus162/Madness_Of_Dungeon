@@ -16,7 +16,8 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(AnimationInfo::default())
-            .register_ldtk_entity::<PlayerBundle>("Player");
+            .register_ldtk_entity::<PlayerBundle>("Player")
+            .add_systems(Update, move_player);
     }
 }
 
@@ -25,12 +26,15 @@ pub struct PlayerMarker;
 
 #[derive(Component)]
 pub struct PlayerStatus {
+    jump_cooldown: Timer,
     coyote_frames: Timer,
+    jump_buffer: Timer,
+    pub level_finished: bool,
     pub dead: bool,
     pub exiting: bool,
 }
 
-#[derive(Component, Debug, PartialEq, Eq)]
+#[derive(Component, Hash, Debug, PartialEq, Eq)]
 pub enum PlayerState{
     Idle,
     MovingRight,
@@ -85,7 +89,14 @@ impl Default for PlayerBundle {
             // render_layer: PLAYER_RENDER_LAYER,
             player_marker: PlayerMarker,
             player_status: PlayerStatus{
+                jump_cooldown: jump_cooldown_timer,
                 coyote_frames: Timer::new(Duration::from_millis(100), TimerMode::Once),
+                jump_buffer: {
+                    let mut timer = Timer::new(Duration::from_millis(100), TimerMode::Once);
+                    timer.tick(Duration::from_millis(100));
+                    timer
+                },
+                level_finished: false,
                 dead: false,
                 exiting: false,
             },
@@ -137,31 +148,64 @@ pub fn move_player(
         mut player_state
     )) = query_player.get_single_mut()
     {
+        if !player_status.jump_cooldown.finished() {
+            player_status.jump_cooldown.tick(time.delta());
+        }
+
         const VELOCITY: Vec2 = Vec2::new(55., 0.);
+        const JUMP_VELOCITY: f32 = 130.;
+
+        let mut moved = false;
+
+        if player_status.dead || player_status.level_finished
+        {
+            return;
+        }
 
         if keys.pressed(KeyCode::KeyD){
             player_velocity.linvel += VELOCITY;
-
             if *player_state == PlayerState::MovingLeft || *player_state == PlayerState::Idle {
                 *player_state = PlayerState::MovingRight;
             }
+            moved = true;
         }
-
         if keys.pressed(KeyCode::KeyA){
             player_velocity.linvel -= VELOCITY;
             if *player_state == PlayerState::MovingRight || *player_state == PlayerState::Idle {
                 *player_state = PlayerState::MovingLeft;
             }
+            moved = true;
         }
+        if !moved{
+            if *player_state == PlayerState::MovingLeft || *player_state == PlayerState::MovingRight
+            {
+                *player_state = PlayerState::Idle;
+            }
+        }
+        if keys.just_pressed(KeyCode::KeyW)
+            || !player_status.jump_buffer.finished()
+            && player_status.jump_cooldown.finished()
+            {
 
-        if keys.just_pressed(KeyCode::KeyW) {
-            let mut can_jump = false;
-            if *player_state != PlayerState::Jumping
-                && *player_state != PlayerState::Falling
-                && *player_state != PlayerState::Sliding {
+                if keys.just_pressed(KeyCode::ArrowUp) {
+                    player_status.jump_buffer.reset();
+                }
+                let mut can_jump = false;
+                if *player_state != PlayerState::Jumping
+                    && *player_state != PlayerState::Falling
+                    && *player_state != PlayerState::Sliding
+                {
+                    // jump from floor
                     can_jump = true;
                 } else if !player_status.coyote_frames.finished() {
                     can_jump = true;
+                }
+
+                if can_jump {
+                    player_velocity.linvel.y += JUMP_VELOCITY;
+                    *player_state = PlayerState::Jumping;
+                    player_status.jump_cooldown.reset();
+                    player_status.coyote_frames.reset();
                 }
         }
     }
