@@ -15,8 +15,9 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(AnimationInfo::default())
+        app
             .register_ldtk_entity::<PlayerBundle>("Player")
+            .add_systems(Startup, setup_animations)
             .add_systems(Update, move_player);
     }
 }
@@ -54,7 +55,7 @@ pub struct PlayerInventory {
 struct PlayerBundle {
     //currently unsure which spritesheet to insert as I need to understand better what and how this playerbundle works, leaving empty for now
     // FURTHERMORE, :).... I need to understand the numbers in the () I am leaving them in for rememberance sake
-    // #[sprite_sheet("Knight/Colour1/Outline/120x80_PNGSheets/_Idle.png", 16, 16, 11, 2, 1, 0, 0)]
+    #[sprite_sheet("Knight/Colour1/Outline/120x80_PNGSheets/_Idle.png", 120, 80, 10, 1, 0, 0, 0)]
     sprite_sheet: Sprite,
     //maybe unsure
     // render_layer: RenderLayers,
@@ -72,20 +73,25 @@ struct PlayerBundle {
     restitution: Restitution,
     //likely unsure
     locked_axes: LockedAxes,
-    animation_timer: AnimationTimer,
+    // animation_timer: AnimationTimer,
     player_state: PlayerState,
+    // new stuff
+    // texture: Handle<Image>,
+    // animation_config: AnimationConfig,
 }
 
 impl Default for PlayerBundle {
+    //chainging from fn default to fn new
     fn default() -> Self {
         // the bellow jump_cooldown_timer, i'm unsure how benefitial this may be right now so it will likely just be un-used till i understand it.
         let mut jump_cooldown_timer = Timer::new(Duration::from_millis(200), TimerMode::Once);
         jump_cooldown_timer.tick(Duration::from_millis(200));
         Self {
-            sprite_sheet:
-            //Ldtk 0.10.0 (no longer used in 0.11.0)
-            // LdtkSpriteSheetBundle::default(),
-            Sprite::default(),
+            sprite_sheet: Sprite {
+                // image: asset_server.load("Knight/Colour1/Outline/120x80_PNGSheets/_Idle.png"),
+                // texture_atlas:
+                ..default()
+            },
             // render_layer: PLAYER_RENDER_LAYER,
             player_marker: PlayerMarker,
             player_status: PlayerStatus{
@@ -117,12 +123,13 @@ impl Default for PlayerBundle {
             },
             locked_axes: LockedAxes::ROTATION_LOCKED,
             player_state: PlayerState::Idle,
-            animation_timer: AnimationTimer(Timer::new(
-                Duration::from_millis(100),
-                TimerMode::Repeating))
+            // animation_timer: AnimationTimer(Timer::new(
+            //     Duration::from_millis(100),
+            //     TimerMode::Repeating))
         }
     }
 }
+
 
 pub fn move_player(
     mut query_player: Query<
