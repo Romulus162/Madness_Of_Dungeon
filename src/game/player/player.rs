@@ -18,7 +18,9 @@ impl Plugin for PlayerPlugin {
         app
             .register_ldtk_entity::<PlayerBundle>("Player")
             .add_systems(Startup, setup_animations)
-            .add_systems(Update, move_player);
+            .add_systems(Update,move_player)
+            // This below function, doesn't seem to be working the way I want it to, or maybe somewhere else, but at least, for now, I can compile and run
+            .add_systems(PostUpdate, execute_animations);
     }
 }
 
@@ -52,11 +54,13 @@ pub struct PlayerInventory {
 }
 
 #[derive(Bundle, LdtkEntity)]
-struct PlayerBundle {
+pub struct PlayerBundle {
     //currently unsure which spritesheet to insert as I need to understand better what and how this playerbundle works, leaving empty for now
     // FURTHERMORE, :).... I need to understand the numbers in the () I am leaving them in for rememberance sake
     #[sprite_sheet("Knight/Colour1/Outline/120x80_PNGSheets/_Idle.png", 120, 80, 10, 1, 0, 0, 0)]
     sprite_sheet: Sprite,
+    animation_config: AnimationConfig,
+
     //maybe unsure
     // render_layer: RenderLayers,
     player_marker: PlayerMarker,
@@ -77,7 +81,6 @@ struct PlayerBundle {
     player_state: PlayerState,
     // new stuff
     // texture: Handle<Image>,
-    // animation_config: AnimationConfig,
 }
 
 impl Default for PlayerBundle {
@@ -88,10 +91,11 @@ impl Default for PlayerBundle {
         jump_cooldown_timer.tick(Duration::from_millis(200));
         Self {
             sprite_sheet: Sprite {
-                // image: asset_server.load("Knight/Colour1/Outline/120x80_PNGSheets/_Idle.png"),
-                // texture_atlas:
+                image: Handle::Weak(default()),
+                texture_atlas: None,
                 ..default()
             },
+            animation_config: AnimationConfig::new(0, 9, 20),
             // render_layer: PLAYER_RENDER_LAYER,
             player_marker: PlayerMarker,
             player_status: PlayerStatus{
@@ -139,6 +143,7 @@ pub fn move_player(
             &mut PlayerInventory,
             &mut PlayerStatus,
             &mut PlayerState,
+            // &mut AnimationConfig, //addition
         ),
         With<PlayerMarker>,
     >,
@@ -152,12 +157,19 @@ pub fn move_player(
         mut sprite,
         mut player_inventory,
         mut player_status,
-        mut player_state
+        mut player_state,
+        // mut animation_config, //addition
     )) = query_player.get_single_mut()
     {
+
+        println!("Current PlayerState: {:?}", *player_state);
+
         if !player_status.jump_cooldown.finished() {
             player_status.jump_cooldown.tick(time.delta());
         }
+
+        //addition
+        // animation_config.frame_timer.tick(time.delta());
 
         const VELOCITY: Vec2 = Vec2::new(55., 0.);
         const JUMP_VELOCITY: f32 = 130.;
