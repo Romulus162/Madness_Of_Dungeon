@@ -19,8 +19,8 @@ impl Plugin for PlayerPlugin {
             .register_ldtk_entity::<PlayerBundle>("Player")
             .add_systems(Startup, setup_animations)
             .add_systems(Update,move_player)
-            // This below function, doesn't seem to be working the way I want it to, or maybe somewhere else, but at least, for now, I can compile and run
-            .add_systems(PostUpdate, execute_animations);
+            .add_systems(PostUpdate, execute_animations)
+            .add_systems(PostUpdate, name_ldtk_players);
     }
 }
 
@@ -134,6 +134,14 @@ impl Default for PlayerBundle {
     }
 }
 
+fn name_ldtk_players(
+    mut commands: Commands,
+    query: Query<Entity, (Added<PlayerMarker>, Without<Name>)>,
+) {
+    for entity in query.iter() {
+        commands.entity(entity).insert(Name::new("Player"));
+    }
+}
 
 pub fn move_player(
     mut query_player: Query<
@@ -162,7 +170,7 @@ pub fn move_player(
     )) = query_player.get_single_mut()
     {
 
-        println!("Current PlayerState: {:?}", *player_state);
+        // println!("Current PlayerState: {:?}", *player_state);
 
         if !player_status.jump_cooldown.finished() {
             player_status.jump_cooldown.tick(time.delta());

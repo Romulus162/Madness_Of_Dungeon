@@ -94,7 +94,7 @@ pub fn execute_animations(
     mut query: Query<(&mut AnimationConfig, &mut Sprite, &PlayerState)>
 ) {
     for (mut config, mut sprite, player_state) in &mut query {
-        println!("🔄 Executing animation system for state: {:?}", player_state);
+        // println!("🔄 Executing animation system for state: {:?}", player_state);
 
         // ✅ Tick frame timer
         config.frame_timer.tick(time.delta());
@@ -103,20 +103,20 @@ pub fn execute_animations(
         if config.frame_timer.just_finished() {
             //this below line is redundant, but for now lets just try to get stuff working
             if let Some(atlas) = &mut sprite.texture_atlas {
-                println!("🕘 Current Frame: {:?}", atlas.index);
+                // println!("🕘 Current Frame: {:?}", atlas.index);
 
                 if atlas.index == config.last_frame {
-                    println!("🔁 Looping back to first frame");
+                    // println!("🔁 Looping back to first frame");
                     atlas.index = config.first_frame;
                 } else {
-                    println!("➡ Moving to next frame");
+                    // println!("➡ Moving to next frame");
                     atlas.index += 1;
                 }
 
                 // ✅ Reset timer properly
                 config.frame_timer.reset();
 
-                println!("🆕 New Frame: {:?}", atlas.index);
+                // println!("🆕 New Frame: {:?}", atlas.index);
             }
         }
     }
@@ -128,7 +128,7 @@ pub fn setup_animations(
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
 
-    println!("setup_animations works");
+    // println!("setup_animations works");
     // load the sprite sheet using the `AssetServer`
     let idle_texture = asset_server.load("Knight/Colour1/Outline/120x80_PNGSheets/_Idle.png");
 
@@ -156,6 +156,6 @@ pub fn setup_animations(
     ));
 
     // commands.insert_resource(AnimationInfo::new(PlayerState::Idle, idle_sprite_sheet));
-    println!("✅ Player animation setup complete!");
+    // println!("✅ Player animation setup complete!");
 
 }
