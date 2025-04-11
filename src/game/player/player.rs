@@ -3,7 +3,6 @@ use bevy_ecs_ldtk::prelude::*;
 use bevy_rapier2d::prelude::*;
 use std::time::Duration;
 // pub mod animation;
-
 use super::animation::*;
 
 // this works for now, but i'm really annoyed with this file structure, at some point i need to refactor this.
@@ -16,13 +15,20 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app
+            .init_resource::<AnimationInfo>()
             .register_ldtk_entity::<PlayerBundle>("Player")
-            .add_systems(Startup, setup_animations)
+            .add_systems(PostUpdate, attach_player_sprite)
+            // .add_systems(Startup, setup_animations)
+            .add_systems(Update, animate_player)
             .add_systems(Update,move_player)
-            .add_systems(PostUpdate, execute_animations)
+            // .add_systems(PostUpdate, execute_animations)
+            // .add_systems(Update, debug_player_entities)
             .add_systems(PostUpdate, name_ldtk_players);
+
     }
 }
+
+//Player entity in world inspector is located at Entity (11v1)/Level_0(12v1)/GameEntities(282v1)/Player(283v1)
 
 #[derive(Default, Component)]
 pub struct PlayerMarker;
@@ -53,13 +59,15 @@ pub struct PlayerInventory {
     pub num_keys: usize,
 }
 
+// Ldtk macro here dictates playerbundle cannot have non-static values such as sprite
+// only solid shit like physics bitch
 #[derive(Bundle, LdtkEntity)]
 pub struct PlayerBundle {
     //currently unsure which spritesheet to insert as I need to understand better what and how this playerbundle works, leaving empty for now
     // FURTHERMORE, :).... I need to understand the numbers in the () I am leaving them in for rememberance sake
-    #[sprite_sheet("Knight/Colour1/Outline/120x80_PNGSheets/_Idle.png", 120, 80, 10, 1, 0, 0, 0)]
-    sprite_sheet: Sprite,
-    animation_config: AnimationConfig,
+    // I may have to re-add this later
+    // sprite_sheet: Sprite,
+    // animation_config: AnimationConfig,
 
     //maybe unsure
     // render_layer: RenderLayers,
@@ -77,7 +85,7 @@ pub struct PlayerBundle {
     restitution: Restitution,
     //likely unsure
     locked_axes: LockedAxes,
-    // animation_timer: AnimationTimer,
+    animation_timer: AnimationTimer,
     player_state: PlayerState,
     // new stuff
     // texture: Handle<Image>,
@@ -90,12 +98,12 @@ impl Default for PlayerBundle {
         let mut jump_cooldown_timer = Timer::new(Duration::from_millis(200), TimerMode::Once);
         jump_cooldown_timer.tick(Duration::from_millis(200));
         Self {
-            sprite_sheet: Sprite {
-                image: Handle::Weak(default()),
-                texture_atlas: None,
-                ..default()
-            },
-            animation_config: AnimationConfig::new(0, 9, 20),
+            // sprite_sheet: Sprite {
+            //     image: Handle::Weak(default()),
+            //     texture_atlas: None,
+            //     ..default()
+            // },
+            // animation_config: AnimationConfig::new(0, 9, 20),
             // render_layer: PLAYER_RENDER_LAYER,
             player_marker: PlayerMarker,
             player_status: PlayerStatus{
@@ -127,19 +135,25 @@ impl Default for PlayerBundle {
             },
             locked_axes: LockedAxes::ROTATION_LOCKED,
             player_state: PlayerState::Idle,
-            // animation_timer: AnimationTimer(Timer::new(
-            //     Duration::from_millis(100),
-            //     TimerMode::Repeating))
+            animation_timer: AnimationTimer(Timer::new(
+                Duration::from_millis(100),
+                TimerMode::Repeating))
         }
     }
 }
 
 fn name_ldtk_players(
     mut commands: Commands,
-    query: Query<Entity, (Added<PlayerMarker>, Without<Name>)>,
+    query: Query<Entity, (With<PlayerMarker>, Without<Name>)>,
 ) {
     for entity in query.iter() {
         commands.entity(entity).insert(Name::new("Player"));
+    }
+}
+
+fn debug_player_entities(query: Query<(Entity, &Name), With<PlayerMarker>>) {
+    for (entity, name) in query.iter() {
+        println!("Found player: {entity:?} with name {:?}", name);
     }
 }
 
@@ -147,7 +161,7 @@ pub fn move_player(
     mut query_player: Query<
         (
             &mut Velocity,
-            &mut Sprite,
+            // &mut Sprite,
             &mut PlayerInventory,
             &mut PlayerStatus,
             &mut PlayerState,
@@ -162,7 +176,7 @@ pub fn move_player(
 ) {
     if let Ok((
         mut player_velocity,
-        mut sprite,
+        // mut sprite,
         mut player_inventory,
         mut player_status,
         mut player_state,

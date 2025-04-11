@@ -1,161 +1,136 @@
-// this whole file is no where close to what I will be using I suspect, right now I'm just trying to figure out the flow, which I think I've done, now I need to actually make it work effeciently.
+use bevy::prelude::*;
+use std::time::Duration;
 
-use bevy::{input::common_conditions::input_just_pressed, prelude::*};
-use std::{collections::HashMap, time::Duration};
-
-//again another example of why I need to start refactoring, this looks so redundant
+// use crate::game::player::{PlayerMarker, PlayerState};
 use crate::game::player::player::{PlayerState, PlayerMarker};
 
-#[derive(Resource, Debug)]
-pub struct AnimationInfo {
-    pub state_animations: HashMap<PlayerState, Sprite>,
-
-}
-
-impl AnimationInfo {
-    pub fn new(player_state: PlayerState, player_sprite_sheet: Sprite) ->  Self{
-
-        let mut state_animations = HashMap::new();
-        state_animations.insert(player_state, player_sprite_sheet);
-
-        Self{state_animations}
-    }
-}
-
 #[derive(Component)]
-pub struct AnimationConfig {
-    pub first_frame: usize,
-    pub last_frame: usize,
-    pub fps: u8,
-    pub frame_timer: Timer,
+pub struct PlayerSpriteMarker;
+
+pub struct AnimationClip {
+    pub layout: Handle<TextureAtlasLayout>,
+    pub image: Handle<Image>,
+    pub start: usize,
+    pub end: usize,
+    pub duration: Vec<u64>,
 }
 
-impl AnimationConfig {
-    pub fn new(first: usize, last: usize, fps: u8) -> Self {
-        let mut timer = Self::timer_from_fps(fps);
-        timer.reset();
+#[derive(Component, Deref, DerefMut)]
+pub struct AnimationTimer(pub Timer);
+
+#[derive(Resource)]
+pub struct AnimationInfo {
+    pub idle: AnimationClip,
+    pub run: AnimationClip,
+    // pub jump: AnimationClip,
+    // pub fall: AnimationClip,
+}
+
+use bevy::ecs::world::FromWorld;
+
+impl FromWorld for AnimationInfo {
+    fn from_world(world: &mut World) -> Self {
+        let idle_image;
+        let run_image;
+        {
+            let asset_server = world.resource::<AssetServer>();
+            idle_image = asset_server.load("Knight/Colour1/Outline/120x80_PNGSheets/_Idle.png");
+            run_image = asset_server.load("Knight/Colour1/Outline/120x80_PNGSheets/_Run.png");
+        }
+
+        let mut atlases: Mut<'_, Assets<TextureAtlasLayout>> = world.resource_mut::<Assets<TextureAtlasLayout>>();
+        let idle_layout = atlases.add(TextureAtlasLayout::from_grid(UVec2::new(120, 80), 10, 1, None, None));
+        let run_layout = atlases.add(TextureAtlasLayout::from_grid(UVec2::new(120, 80), 6, 1, None, None));
+
         Self {
-            first_frame: first,
-            last_frame: last,
-            fps,
-            frame_timer: timer,
+            idle: AnimationClip {
+                image: idle_image,
+                layout: idle_layout,
+                start: 0,
+                end: 9,
+                duration: vec![100; 10],
+            },
+            run: AnimationClip {
+                image: run_image,
+                layout: run_layout,
+                start: 0,
+                end: 5,
+                duration: vec![80; 6],
+            },
         }
     }
-
-    fn timer_from_fps(fps: u8) -> Timer {
-        Timer::new(Duration::from_secs_f32(1.0 / (fps as f32)), TimerMode::Repeating)
-    }
 }
 
-// copied from bevy 0.15 spritesheet example, right now this only animates once
-//fn animate
-
-// I will mess with this further in the future, right now it will likely be un-used
-// pub fn execute_animations(
-//     time: Res<Time>,
-//     animation_info: Res<AnimationInfo>,
-//     mut query: Query<(&mut AnimationConfig, &mut Sprite, &PlayerState)>)
-//     {
-//         println!("animation info is {:?}", animation_info);
-
-//         for (mut config, mut sprite, player_state) in &mut query {
-
-//         println!("executing animation system for state: {:?}", player_state);
-
-//         if let Some(animation) = animation_info.state_animations.get(player_state) {
-//             sprite.texture_atlas = animation.sprite.texture_atlas.clone();
-//         }
-
-//         // we track how long the current sprite has been displayed for
-//         config.frame_timer.tick(time.delta());
-
-//         // If it has been displayed for the user-defined amount of time (fps)...
-//         if config.frame_timer.just_finished() {
-//             if let Some(atlas) = &mut sprite.texture_atlas {
-//                 println!{"current frame: {:?}", atlas.index};
-//                 if atlas.index == config.last_frame {
-//                     // ...and it IS the last frame, then we move back to the first frame and stop.
-//                     atlas.index = config.first_frame;
-//                 } else {
-//                     // ...and it is NOT the last frame, then we move to the next frame...
-//                     atlas.index += 1;
-//                     // ...and reset the frame timer to start counting all over again
-//                     config.frame_timer = AnimationConfig::timer_from_fps(config.fps);
-//                 }
-
-//                 println!("New Frame: {:?}", atlas.index);
-//             }
-//         }
-//     }
-// }
-
-pub fn execute_animations(
+//still wondering about if attaching child to parent player is necessary
+pub fn animate_player(
     time: Res<Time>,
-    mut query: Query<(&mut AnimationConfig, &mut Sprite, &PlayerState)>
+    animation_info: Res<AnimationInfo>,
+    mut sprite_query: Query<
+        (&mut Sprite, &mut AnimationTimer, &Parent),
+        With<PlayerSpriteMarker>,
+    >,
+    state_query: Query<&PlayerState, With<PlayerMarker>>,
 ) {
-    for (mut config, mut sprite, player_state) in &mut query {
-        // println!("🔄 Executing animation system for state: {:?}", player_state);
+    if let Ok((mut sprite, mut timer, parent)) = sprite_query.get_single_mut() {
+        if let Ok(player_state) = state_query.get(parent.get()) {
+            let clip = match *player_state {
+                PlayerState::MovingLeft | PlayerState::MovingRight => &animation_info.run,
+                PlayerState::Idle => &animation_info.idle,
+                _ => &animation_info.idle,
+            };
 
-        // ✅ Tick frame timer
-        config.frame_timer.tick(time.delta());
+            timer.tick(time.delta());
 
-        // ✅ Check if timer has finished
-        if config.frame_timer.just_finished() {
-            //this below line is redundant, but for now lets just try to get stuff working
-            if let Some(atlas) = &mut sprite.texture_atlas {
-                // println!("🕘 Current Frame: {:?}", atlas.index);
+            if timer.just_finished() {
+                if let Some(atlas) = &mut sprite.texture_atlas {
+                    atlas.index = if atlas.index < clip.start || atlas.index > clip.end {
+                        clip.start
+                    } else if atlas.index == clip.end {
+                        clip.start
+                    } else {
+                        atlas.index + 1
+                    };
 
-                if atlas.index == config.last_frame {
-                    // println!("🔁 Looping back to first frame");
-                    atlas.index = config.first_frame;
-                } else {
-                    // println!("➡ Moving to next frame");
-                    atlas.index += 1;
+                    let frame_index = atlas.index - clip.start;
+                    let duration = clip.duration.get(frame_index).copied().unwrap_or(100);
+                    timer.set_duration(Duration::from_millis(duration));
                 }
-
-                // ✅ Reset timer properly
-                config.frame_timer.reset();
-
-                // println!("🆕 New Frame: {:?}", atlas.index);
             }
         }
     }
 }
 
-pub fn setup_animations(
+pub fn attach_player_sprite(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    animation_info: Res<AnimationInfo>,
+    query: Query<Entity, (With<PlayerMarker>, Without<PlayerSpriteMarker>)>,
+    mut has_run: Local<bool>,
 ) {
+    if *has_run {
+        return;
+    }
 
-    // println!("setup_animations works");
-    // load the sprite sheet using the `AssetServer`
-    let idle_texture = asset_server.load("Knight/Colour1/Outline/120x80_PNGSheets/_Idle.png");
+    if let Ok(player_entity) = query.get_single() {
+        let idle = &animation_info.idle;
 
-    // the sprite sheet has 10 sprites arranged in a row, and they are all 120px x 80px
-    let idle_layout = TextureAtlasLayout::from_grid(UVec2::new(120, 80), 10, 1, None, None);
+        commands.entity(player_entity).with_children(|parent| {
+            parent.spawn((
+                Sprite::from_atlas_image(
+                    idle.image.clone(),
+                    TextureAtlas {
+                        layout: idle.layout.clone(),
+                        index: idle.start,
+                    },
+                ),
+                Transform::from_xyz(5.0, 35.0, 5.0),
+                PlayerSpriteMarker,
+                AnimationTimer(Timer::new(
+                    Duration::from_millis(idle.duration[0]),
+                    TimerMode::Repeating,
+                    ))
+            ));
+        });
 
-    // the first idle sprite runs at 20 FPS
-    // let idle_config = AnimationConfig::new(0, 9, 20);
-    let idle_texture_layout = texture_atlas_layouts.add(idle_layout);
-
-    // Initialize all the values
-    let idle_animation = AnimationConfig::new(0, 9, 20);
-
-    //this might be redundant, but it is experimental trying to get stuff working
-    commands.spawn((
-        Sprite::from_atlas_image(
-            idle_texture.clone(),
-            TextureAtlas {
-                layout: idle_texture_layout,
-                index: idle_animation.first_frame,
-            },
-        ),
-        idle_animation,
-        PlayerMarker,
-    ));
-
-    // commands.insert_resource(AnimationInfo::new(PlayerState::Idle, idle_sprite_sheet));
-    // println!("✅ Player animation setup complete!");
-
+        *has_run = true;
+    }
 }

@@ -2,6 +2,8 @@ use bevy::prelude::*;
 use bevy::input::common_conditions::input_toggle_active;
 use bevy_rapier2d::plugin::{NoUserData, RapierPhysicsPlugin};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_rapier2d::render::RapierDebugRenderPlugin;
+
 
 use super::{camera::camera, level::{level, tiles}, player::player};
 
@@ -17,6 +19,7 @@ impl Plugin for GamePlugin {
             camera::CameraPlugin,
             tiles::WallPlugin,
             WorldInspectorPlugin::default().run_if(input_toggle_active(true, KeyCode::Escape)),
+            RapierDebugRenderPlugin::default(),
         ));
     }
 }
