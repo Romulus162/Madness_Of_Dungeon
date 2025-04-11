@@ -22,25 +22,56 @@ pub struct AnimationTimer(pub Timer);
 pub struct AnimationInfo {
     pub idle: AnimationClip,
     pub run: AnimationClip,
-    // pub jump: AnimationClip,
-    // pub fall: AnimationClip,
+    pub attack: AnimationClip,
+    pub crouch: AnimationClip,
+    pub crouch_walk: AnimationClip,
+    pub jump: AnimationClip,
+    pub jump_fall_between: AnimationClip,
+    pub fall: AnimationClip,
+    pub turn_around: AnimationClip,
 }
 
 use bevy::ecs::world::FromWorld;
 
 impl FromWorld for AnimationInfo {
     fn from_world(world: &mut World) -> Self {
+
         let idle_image;
         let run_image;
+        let attack_image;
+        let crouch_image;
+        let crouch_walk_image;
+        let jump_image;
+        let jump_fall_between_image;
+        let fall_image;
+        let turn_around_image;
+
         {
             let asset_server = world.resource::<AssetServer>();
+
             idle_image = asset_server.load("Knight/Colour1/Outline/120x80_PNGSheets/_Idle.png");
             run_image = asset_server.load("Knight/Colour1/Outline/120x80_PNGSheets/_Run.png");
+            attack_image = asset_server.load("Knight/Colour1/Outline/120x80_PNGSheets/_Attack.png");
+            crouch_image = asset_server.load("Knight/Colour1/Outline/120x80_PNGSheets/_Crouch.png");
+            crouch_walk_image = asset_server.load("Knight/Colour1/Outline/120x80_PNGSheets/_CrouchWalk.png");
+            jump_image = asset_server.load("Knight/Colour1/Outline/120x80_PNGSheets/_Jump.png");
+            jump_fall_between_image = asset_server.load("Knight/Colour1/Outline/120x80_PNGSheets/_JumpFallInbetween.png");
+            fall_image = asset_server.load("Knight/Colour1/Outline/120x80_PNGSheets/_Fall.png");
+            turn_around_image = asset_server.load("Knight/Colour1/Outline/120x80_PNGSheets/_TurnAround.png");
+
         }
 
         let mut atlases: Mut<'_, Assets<TextureAtlasLayout>> = world.resource_mut::<Assets<TextureAtlasLayout>>();
+
         let idle_layout = atlases.add(TextureAtlasLayout::from_grid(UVec2::new(120, 80), 10, 1, None, None));
         let run_layout = atlases.add(TextureAtlasLayout::from_grid(UVec2::new(120, 80), 6, 1, None, None));
+        let attack_layout = atlases.add(TextureAtlasLayout::from_grid(UVec2::new(120, 80), 6, 1, None, None));
+        let crouch_layout = atlases.add(TextureAtlasLayout::from_grid(UVec2::new(120, 80), 6, 1, None, None));
+        let crouch_walk_layout = atlases.add(TextureAtlasLayout::from_grid(UVec2::new(120, 80), 6, 1, None, None));
+        let jump_layout = atlases.add(TextureAtlasLayout::from_grid(UVec2::new(120, 80), 6, 1, None, None));
+        let jump_fall_between_layout = atlases.add(TextureAtlasLayout::from_grid(UVec2::new(120, 80), 6, 1, None, None));
+        let fall_layout = atlases.add(TextureAtlasLayout::from_grid(UVec2::new(120, 80), 6, 1, None, None));
+        let turn_around_layout = atlases.add(TextureAtlasLayout::from_grid(UVec2::new(120, 80), 6, 1, None, None));
 
         Self {
             idle: AnimationClip {
@@ -56,6 +87,55 @@ impl FromWorld for AnimationInfo {
                 start: 0,
                 end: 5,
                 duration: vec![80; 6],
+            },
+            attack: AnimationClip {
+                image: attack_image,
+                layout: attack_layout,
+                start: 0,
+                end: 3,
+                duration: vec![80; 4],
+            },
+            crouch: AnimationClip {
+                image: crouch_image,
+                layout: crouch_layout,
+                start: 0,
+                end: 0,
+                duration: vec![80; 1],
+            },
+            crouch_walk: AnimationClip {
+                image: crouch_walk_image,
+                layout: crouch_walk_layout,
+                start: 0,
+                end: 7,
+                duration: vec![80; 8],
+            },
+            jump: AnimationClip {
+                image: jump_image,
+                layout: jump_layout,
+                start: 0,
+                end: 2,
+                duration: vec![80; 3],
+            },
+            jump_fall_between: AnimationClip {
+                image: jump_fall_between_image,
+                layout: jump_fall_between_layout,
+                start: 0,
+                end: 1,
+                duration: vec![80; 2],
+            },
+            fall: AnimationClip {
+                image: fall_image,
+                layout: fall_layout,
+                start: 0,
+                end: 2,
+                duration: vec![80; 3],
+            },
+            turn_around: AnimationClip {
+                image: turn_around_image,
+                layout: turn_around_layout,
+                start: 0,
+                end: 2,
+                duration: vec![80; 3],
             },
         }
     }
