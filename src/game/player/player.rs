@@ -17,14 +17,22 @@ impl Plugin for PlayerPlugin {
         app
             .init_resource::<AnimationInfo>()
             .register_ldtk_entity::<PlayerBundle>("Player")
-            .add_systems(PostUpdate, attach_player_sprite)
+            .add_systems(PostUpdate, (
+                attach_player_sprite,
+                name_ldtk_players,
+                add_controllable_to_player,
+            ))
             // .add_systems(Startup, setup_animations)
             .add_systems(Update, animate_player)
-            .add_systems(Update,move_player)
+            //deprecated, trying new system
+            // .add_systems(Update,move_player)
+            .add_systems(Update, (
+                collect_input,
+                apply_movement,
+                jump_system,
+            ));
             // .add_systems(PostUpdate, execute_animations)
             // .add_systems(Update, debug_player_entities)
-            .add_systems(PostUpdate, name_ldtk_players);
-
     }
 }
 
@@ -157,97 +165,95 @@ fn debug_player_entities(query: Query<(Entity, &Name), With<PlayerMarker>>) {
     }
 }
 
-pub fn move_player(
-    mut query_player: Query<
-        (
-            &mut Velocity,
-            // &mut Sprite,
-            &mut PlayerInventory,
-            &mut PlayerStatus,
-            &mut PlayerState,
-            // &mut AnimationConfig, //addition
-        ),
-        With<PlayerMarker>,
-    >,
-    // camera_planning_state: Res<CameraPanning>,
+//new movement system
+#[derive(Component)]
+pub struct Controllable {
+    pub max_speed: f32,
+    pub jump_velocity: f32,
+    pub acceleration: f32,
+    pub grounded: bool,
+    pub left: bool,
+    pub right: bool,
+    pub jump_requested: bool,
+    pub jump_buffer_timer: Timer,
+}
+
+impl Default for Controllable {
+    fn default() -> Self {
+        Self{
+            max_speed: 120.0,
+            jump_velocity: 200.0,
+            acceleration: 700.0,
+            grounded: false,
+            left: false,
+            right: false,
+            jump_requested: false,
+            jump_buffer_timer: Timer::from_seconds(0.15, TimerMode::Once),
+        }
+    }
+}
+
+pub fn collect_input(
     keys: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
-    // mut sound_effect_event_writer: EventWriter<SoundEffectEvent>,
+    mut query: Query<&mut Controllable>,
 ) {
-    if let Ok((
-        mut player_velocity,
-        // mut sprite,
-        mut player_inventory,
-        mut player_status,
-        mut player_state,
-        // mut animation_config, //addition
-    )) = query_player.get_single_mut()
-    {
+    for mut control in query.iter_mut() {
+        control.left = keys.pressed(KeyCode::KeyA);
+        control.right = keys.pressed(KeyCode::KeyD);
 
-        // println!("Current PlayerState: {:?}", *player_state);
-
-        if !player_status.jump_cooldown.finished() {
-            player_status.jump_cooldown.tick(time.delta());
+        if keys.just_pressed(KeyCode::Space) {
+            control.jump_requested = true;
+            control.jump_buffer_timer.reset();
         }
 
-        //addition
-        // animation_config.frame_timer.tick(time.delta());
+        control.jump_buffer_timer.tick(time.delta());
+    }
+}
 
-        const VELOCITY: Vec2 = Vec2::new(55., 0.);
-        const JUMP_VELOCITY: f32 = 130.;
+pub fn apply_movement(
+    time: Res<Time>,
+    mut query: Query<(&mut Velocity, &Controllable)>,
+) {
+    for (mut velocity, control) in query.iter_mut() {
+        let mut desired_velocity = 0.0;
 
-        let mut moved = false;
-
-        if player_status.dead || player_status.level_finished
-        {
-            return;
+        if control.left {
+            desired_velocity -= control.max_speed;
+        }
+        if control.right {
+            desired_velocity += control.max_speed;
         }
 
-        if keys.pressed(KeyCode::KeyD){
-            player_velocity.linvel += VELOCITY;
-            if *player_state == PlayerState::MovingLeft || *player_state == PlayerState::Idle {
-                *player_state = PlayerState::MovingRight;
-            }
-            moved = true;
-        }
-        if keys.pressed(KeyCode::KeyA){
-            player_velocity.linvel -= VELOCITY;
-            if *player_state == PlayerState::MovingRight || *player_state == PlayerState::Idle {
-                *player_state = PlayerState::MovingLeft;
-            }
-            moved = true;
-        }
-        if !moved{
-            if *player_state == PlayerState::MovingLeft || *player_state == PlayerState::MovingRight
-            {
-                *player_state = PlayerState::Idle;
-            }
-        }
-        if keys.just_pressed(KeyCode::KeyW)
-            || !player_status.jump_buffer.finished()
-            && player_status.jump_cooldown.finished()
-            {
+        let diff = desired_velocity - velocity.linvel.x;
+        let accel = control.acceleration * time.delta_secs();
 
-                if keys.just_pressed(KeyCode::ArrowUp) {
-                    player_status.jump_buffer.reset();
-                }
-                let mut can_jump = false;
-                if *player_state != PlayerState::Jumping
-                    && *player_state != PlayerState::Falling
-                    && *player_state != PlayerState::Sliding
-                {
-                    // jump from floor
-                    can_jump = true;
-                } else if !player_status.coyote_frames.finished() {
-                    can_jump = true;
-                }
+        velocity.linvel.x += diff.clamp(-accel, accel);
+    }
+}
 
-                if can_jump {
-                    player_velocity.linvel.y += JUMP_VELOCITY;
-                    *player_state = PlayerState::Jumping;
-                    player_status.jump_cooldown.reset();
-                    player_status.coyote_frames.reset();
-                }
+pub fn jump_system(
+    mut query: Query<(&mut Velocity, &mut Controllable)>,
+) {
+    for (mut velocity, mut control) in query.iter_mut() {
+        control.grounded = true;
+
+        if control.jump_requested && control.grounded {
+            velocity.linvel.y = control.jump_velocity;
+            control.jump_requested = false;
         }
+
+        if control.jump_buffer_timer.finished() {
+            control.jump_requested = false;
+        }
+    }
+}
+
+fn add_controllable_to_player(
+    mut commands: Commands,
+    query: Query<Entity, (With<PlayerMarker>, Without<Controllable>)>,
+) {
+    for entity in query.iter() {
+        commands.entity(entity).insert(Controllable::default());
     }
 }
