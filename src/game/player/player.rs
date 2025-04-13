@@ -30,6 +30,7 @@ impl Plugin for PlayerPlugin {
                 collect_input,
                 apply_movement,
                 jump_system,
+                update_player_state,
             ));
             // .add_systems(PostUpdate, execute_animations)
             // .add_systems(Update, debug_player_entities)
@@ -51,7 +52,7 @@ pub struct PlayerStatus {
     pub exiting: bool,
 }
 
-#[derive(Component, Hash, Debug, PartialEq, Eq)]
+#[derive(Component, Hash, Debug, PartialEq, Eq, Clone, Copy)]
 pub enum PlayerState{
     Idle,
     MovingRight,
@@ -147,6 +148,23 @@ impl Default for PlayerBundle {
                 Duration::from_millis(100),
                 TimerMode::Repeating))
         }
+    }
+}
+
+pub fn update_player_state(
+    mut query: Query<(&Velocity, &mut PlayerState), With<PlayerMarker>>,
+) {
+    for (velocity, mut state) in query.iter_mut() {
+        let speed_threshold = 1.0;
+
+        *state = if velocity.linvel.x > speed_threshold {
+            PlayerState::MovingRight
+        } else if velocity.linvel.x < -speed_threshold {
+            PlayerState::MovingLeft
+        } else {
+            PlayerState::Idle
+        };
+        // println!("vel: {:?}, new_state: {:?}", velocity.linvel, state);
     }
 }
 

@@ -150,20 +150,39 @@ pub fn animate_player(
         With<PlayerSpriteMarker>,
     >,
     state_query: Query<&PlayerState, With<PlayerMarker>>,
+    mut last_state: Local<Option<PlayerState>>,
 ) {
     if let Ok((mut sprite, mut timer, parent)) = sprite_query.get_single_mut() {
+
         if let Ok(player_state) = state_query.get(parent.get()) {
+        println!("Using clip: {:?}", player_state);
+
+            // println!("Sprite sees state: {:?}", player_state);
             let clip = match *player_state {
                 PlayerState::MovingLeft | PlayerState::MovingRight => &animation_info.run,
                 PlayerState::Idle => &animation_info.idle,
                 _ => &animation_info.idle,
             };
 
+            if Some(*player_state) != *last_state {
+                if let Some(atlas) = &mut sprite.texture_atlas {
+                    atlas.index = clip.start;
+                }
+                timer.set_duration(Duration::from_millis(clip.duration[0]));
+                timer.reset();
+                *last_state = Some(*player_state);
+            }
+
             timer.tick(time.delta());
 
             if timer.just_finished() {
                 if let Some(atlas) = &mut sprite.texture_atlas {
                     atlas.index = if atlas.index < clip.start || atlas.index > clip.end {
+                        println!(
+                            "Animating: state={:?}, index={}, start={}, end={}",
+                            player_state, atlas.index, clip.start, clip.end
+                        );
+
                         clip.start
                     } else if atlas.index == clip.end {
                         clip.start
@@ -176,7 +195,14 @@ pub fn animate_player(
                     timer.set_duration(Duration::from_millis(duration));
                 }
             }
+            sprite.flip_x = matches!(*player_state, PlayerState::MovingLeft);
         }
+        // println!(
+        //     "Timer finished: {}, current frame: {}",
+        //     timer.just_finished(),
+        //     sprite.texture_atlas.as_ref().map(|a| a.index).unwrap_or(999)
+        // );
+
     }
 }
 
