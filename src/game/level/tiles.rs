@@ -94,23 +94,26 @@ pub fn spawn_wall_collision(
     if !wall_query.is_empty() {
         level_query.iter().for_each(|(level_entity, level_iid)| {
             if let Some(level_walls) = level_to_wall_locations.get(&level_entity) {
-                let ldtk_project = ldtk_project_assets
-                    .get(ldtk_projects.single())
-                    .expect("Project should be loaded if level has spawned");
+                // memory unsafe way
+                // let ldtk_project = ldtk_project_assets
+                //     .get(ldtk_projects.single())
+                //     .expect("Project should be loaded if level has spawned");
+                if let Some(ldtk_project_handle) = ldtk_projects.iter().next() {
+                    if let Some(ldtk_project) = ldtk_project_assets.get(ldtk_project_handle) {
 
-                let level = ldtk_project
-                    .as_standalone()
-                    .get_loaded_level_by_iid(&level_iid.to_string())
-                    .expect("Spawned level should exist in LDtk project");
+                        let level = ldtk_project
+                        .as_standalone()
+                        .get_loaded_level_by_iid(&level_iid.to_string())
+                        .expect("Spawned level should exist in LDtk project");
 
-                let LayerInstance {
-                    c_wid: width,
-                    c_hei: height,
-                    grid_size,
-                    ..
-                } = level.layer_instances()[0];
+                        let LayerInstance {
+                            c_wid: width,
+                            c_hei: height,
+                            grid_size,
+                            ..
+                        } = level.layer_instances()[0];
 
-                // combine wall tiles into flat "plates" in each individual row
+                                        // combine wall tiles into flat "plates" in each individual row
                 let mut plate_stack: Vec<Vec<Plate>> = Vec::new();
 
                 for y in 0..height {
@@ -193,7 +196,13 @@ pub fn spawn_wall_collision(
                             ))
                             .insert(GlobalTransform::default());
                     }
-                });
+                                    });
+                    } else {
+                        warn!{"LdtkProject not yet loaded"};
+                    }
+                } else {
+                    warn!{"No LdtkProjectHandle found in the world!"};
+                }
             }
         });
     }

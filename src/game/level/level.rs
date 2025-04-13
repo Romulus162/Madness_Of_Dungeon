@@ -14,8 +14,9 @@ pub struct LevelManagementPlugin;
 impl Plugin for LevelManagementPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(LdtkPlugin)
+            .insert_resource(TargetLevel(0))
             .insert_resource(LastAccessibleLevel(0))
-            .add_systems(Startup, spawn_ldtk_world)
+            // .add_systems(Startup, spawn_ldtk_world)
             .add_systems(OnEnter(LevelLoadingState::Loading), load_level);
     }
 }
@@ -25,11 +26,20 @@ pub const LEVEL_IIDS: [&str; 1] = [
     "a315ac10-66b0-11ec-9cd7-99f223ad6ade",
 ];
 
+//deprecated function, load_level takes over for now
 fn spawn_ldtk_world(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     target_level: Res<TargetLevel>,
+    existing_world_query: Query<Entity, With<LdtkProjectHandle>>,
 ) {
+
+    if existing_world_query.iter().next().is_some() {
+        info!("LDtk world already exists, skipping spawn.");
+        return;
+    }
+
+
     let handle = asset_server.load("Dungeon.ldtk");
     commands.spawn(LdtkWorldBundle {
         ldtk_handle: handle.into(),
